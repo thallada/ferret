@@ -4,16 +4,16 @@ Search DuckDuckGo in your terminal.
 
 Run `ferret` and enter a search query:
 
-![dialog box for entering search query](docs/search_input.png)
+![dialog box for entering search query](doc/search_input.png)
 
 Ferret will display the first page of results:
 
-![list of results scraped from DuckDuckGo](docs/results_list.png)
+![list of results scraped from DuckDuckGo](doc/results_list.png)
 
 Press Enter on a result and it will open the result in a terminal text-based web
 browser (w3m):
 
-![viewing a search result in the w3m terminal web browser](docs/w3m.png)
+![viewing a search result in the w3m terminal web browser](doc/w3m.png)
 
 ## Why DuckDuckGo
 
@@ -23,9 +23,10 @@ fill out a captcha.
 
 ## Bugs
 
-There's [an issue]() with launching a sub program in [Cursive](), the Rust terminal
-UI library I'm using, where keyboard input doesn't quite go through and the
-cursor does not show up.
+There's [an issue](https://github.com/gyscos/Cursive/issues/199) with launching
+a sub program in [Cursive](https://github.com/gyscos/Cursive), the Rust
+terminal UI library I'm using, where keyboard input doesn't quite go through
+and the cursor does not show up.
 
 ## Todo
 
