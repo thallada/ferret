@@ -21,6 +21,7 @@ struct SearchResult {
     title: String,
     domain: String,
     url: String,
+    snippet: String,
 }
 
 const DDG_HTML_URL: &str = "https://duckduckgo.com";
@@ -72,15 +73,18 @@ fn search(s: &mut Cursive, query: &str) {
         let result_selector = Selector::parse(".web-result").unwrap();
         let result_title_selector = Selector::parse(".result__a").unwrap();
         let result_url_selector = Selector::parse(".result__url").unwrap();
+        let result_snippet_selector = Selector::parse(".result__snippet").unwrap();
 
         let mut results: Vec<SearchResult> = Vec::new();
         for result in document.select(&result_selector) {
             let result_title = result.select(&result_title_selector).next().unwrap();
             let result_url = result.select(&result_url_selector).next().unwrap();
+            let result_snippet = result.select(&result_snippet_selector).next().unwrap();
             results.push(SearchResult {
                 title: result_title.text().collect::<Vec<_>>().join(""),
                 domain: result_url.text().collect::<Vec<_>>().join(""),
                 url: String::from(result_url.value().attr("href").unwrap()),
+                snippet: String::from(result_snippet.text().collect::<Vec<_>>().join("")),
             } );
         }
 
@@ -100,11 +104,15 @@ fn build_list(results: Vec<SearchResult>) -> OnEventView<SelectView> {
     for (i, result) in results.into_iter().enumerate() {
         let url = format!("{}{}", DDG_HTML_URL, result.url);
         result_view = result_view.item(
-            format!("{}. {}", i, result.title),
+            format!("{}. {}", i + 1, result.title),
             url.clone()
         )
         .item(
             format!("   {}", result.domain.replace("\n", "").trim()),
+            url.clone()
+        )
+        .item(
+            format!("   {}", result.snippet.replace("\n", "").trim()),
             url.clone()
         )
 		.item(
@@ -118,17 +126,17 @@ fn build_list(results: Vec<SearchResult>) -> OnEventView<SelectView> {
     let result_view = OnEventView::new(result_view)
         .on_pre_event_inner(Key::Up, |s| {
             let from_bottom = (s.len() - 1) - s.selected_id().unwrap();
-            if from_bottom < 2 {
-                s.select_up(2 - from_bottom);
+            if from_bottom < 3 {
+                s.select_up(3 - from_bottom);
             } else {
-                s.select_up(3);
+                s.select_up(4);
             }
             Some(EventResult::Consumed(None))
         })
         .on_pre_event_inner(Key::Down, |s| {
-            if s.selected_id().unwrap() != s.len() - 3 {
-                s.select_down(4);
-                s.select_up(1);
+            if s.selected_id().unwrap() != s.len() - 4 {
+                s.select_down(6);
+                s.select_up(2);
             }
             Some(EventResult::Consumed(None))
         });
