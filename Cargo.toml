@@ -5,13 +5,12 @@ authors = ["Tyler Hallada <tyler@hallada.net>"]
 
 [dependencies]
 termion = "1.5.1"
-tui = "0.2.0"
 liner = "0.4.4"
-reqwest = "0.8.4"
-scraper = "0.4.0"
-chan = "0.1.20"
+reqwest = "0.9.4"
+scraper = "0.8.1"
+html2text = "0.1.8"
 
 [dependencies.cursive]
-version = "0.7.5"
+version = "0.9.2"
 default-features = false
 features = ["termion-backend"]

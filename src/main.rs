@@ -1,21 +1,25 @@
-extern crate chan;
 extern crate cursive;
 extern crate reqwest;
 extern crate scraper;
 extern crate termion;
+extern crate html2text;
 
-use std::process::{Command, Stdio};
+use std::collections::{HashMap};
 
 use cursive::Cursive;
 use cursive::align::HAlign;
 use cursive::event::{EventResult, Key};
-use cursive::theme::{BaseColor, Color, Theme};
+use cursive::theme::{BaseColor, Color, PaletteColor, Theme};
 use cursive::traits::*;
-use cursive::views::{Dialog, EditView, OnEventView, SelectView};
+use cursive::views::{
+    Dialog, EditView, HideableView,OnEventView, ScrollView, SelectView, TextView
+};
 
-use reqwest::Client;
+use reqwest::{Client, Url};
 
 use scraper::{Html, Selector};
+
+use html2text::from_read;
 
 struct SearchResult {
     title: String,
@@ -27,7 +31,7 @@ struct SearchResult {
 const DDG_HTML_URL: &str = "https://duckduckgo.com";
 
 fn main() {
-    let mut siv = Cursive::new();
+    let mut siv = Cursive::default();
     siv.add_active_screen();
 
     let theme = get_dark_theme(&siv);
@@ -89,16 +93,20 @@ fn search(s: &mut Cursive, query: &str) {
         }
 
         s.pop_layer();
-        s.add_layer(
-            Dialog::new()
-                .title(query)
-                .button("Exit", |s| s.quit())
-                .content(build_list(results))
-        )
+        add_result_list(s, query, results);
     }
 }
 
-fn build_list(results: Vec<SearchResult>) -> OnEventView<SelectView> {
+fn add_result_list(s: &mut Cursive, query: &str, results: Vec<SearchResult>) {
+    s.add_layer(
+        Dialog::new()
+            .title(query)
+            .button("Exit", |s| s.quit())
+            .content(build_list(results))
+    )
+}
+
+fn build_list(results: Vec<SearchResult>) -> HideableView<OnEventView<SelectView>> {
     let mut result_view = SelectView::new().h_align(HAlign::Left);
 
     for (i, result) in results.into_iter().enumerate() {
@@ -123,7 +131,10 @@ fn build_list(results: Vec<SearchResult>) -> OnEventView<SelectView> {
 
     result_view.set_on_submit(open_url);
 
-    let result_view = OnEventView::new(result_view)
+    let result_view = HideableView::new(OnEventView::new(result_view)
+        .on_event('q', |s| {
+            s.quit();
+        })
         .on_pre_event_inner(Key::Up, |s| {
             let from_bottom = (s.len() - 1) - s.selected_id().unwrap();
             if from_bottom < 3 {
@@ -139,28 +150,35 @@ fn build_list(results: Vec<SearchResult>) -> OnEventView<SelectView> {
                 s.select_up(2);
             }
             Some(EventResult::Consumed(None))
-        });
+        }));
 
     result_view
 }
 
-fn open_url(_: &mut Cursive, url: &str) {
-    Command::new("w3m")
-        .args(&[url])
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .output().unwrap();
+fn open_url(s: &mut Cursive, url: &str) {
+    let term_size = s.screen_size();
+    let actual_url = Url::parse(url).unwrap();
+    let hash_query: HashMap<_, _> = actual_url.query_pairs().into_owned().collect();
+    let result_url = hash_query.get("uddg");
+    let client = Client::new();
+    let mut resp = client.get(result_url.unwrap().as_str()).send().unwrap();
+    let text = from_read(resp.text().unwrap().as_bytes(), term_size.x - 3);
+    s.pop_layer();
+    s.add_layer(OnEventView::new(ScrollView::new(TextView::new(text)))
+        .on_event('q', |s| {
+            s.quit();
+        }));
 }
 
 fn get_dark_theme(siv: &Cursive) -> Theme {
     // We'll return the current theme with a small modification
     let mut theme = siv.current_theme().clone();
 
-    theme.colors.background = Color::TerminalDefault;
-    theme.colors.view = Color::Dark(BaseColor::Black);
-    theme.colors.shadow = Color::Dark(BaseColor::Black);
-    theme.colors.primary = Color::Dark(BaseColor::White);
-    theme.colors.tertiary = Color::Dark(BaseColor::Black);
+    theme.palette[PaletteColor::Background] = Color::TerminalDefault;
+    theme.palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
+    theme.palette[PaletteColor::Primary] = Color::Dark(BaseColor::White);
+    theme.palette[PaletteColor::Tertiary] = Color::Dark(BaseColor::Black);
 
+    theme.shadow = false;
     theme
 }
